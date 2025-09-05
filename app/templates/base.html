@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Reservation System{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <nav class="col-12 col-md-3 col-lg-2 bg-white border-end py-4 px-3">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">Menu</h3>
+                    <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+                <div class="collapse d-md-block" id="sidebarMenu">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.dashboard' %} active{% endif %}">Dashboard</a>
+                        <a href="{{ url_for('main.customers') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.customers' %} active{% endif %}">Customers</a>
+                        <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.calendar' %} active{% endif %}">Create Calendar</a>
+                        <a href="{{ url_for('main.reservation') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.reservation' %} active{% endif %}">Reservation</a>
+                        <a href="{{ url_for('main.agenda') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.agenda' %} active{% endif %}">Agenda</a>
+                        <a href="{{ url_for('main.profile') }}" class="btn btn-outline-secondary{% if request.endpoint == 'main.profile' %} active{% endif %}">Profile</a>
+                        <a href="{{ url_for('main.skills') }}" class="btn btn-outline-secondary{% if request.endpoint == 'main.skills' %} active{% endif %}">Skills</a>
+                        <a href="{{ url_for('main.logout') }}" class="btn btn-danger mt-4">Logout</a>
+                    </div>
+                </div>
+            </nav>
+            <main class="col-12 col-md-9 col-lg-10 py-5 px-4">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Make a Reservation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-success" role="alert">
+          {% for message in messages %}
+            {{ message }}<br>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <h2 class="mb-4 text-center">Choose a Service</h2>
+    <div class="row g-4 justify-content-center">
+        {% for skill in skills %}
+        <div class="col-12 col-sm-6 col-md-4">
+            <div class="card h-100 shadow-sm">
+                {% if skill.image_url %}
+                <img src="{{ skill.image_url }}" class="card-img-top" alt="{{ skill.type }}" style="max-height:180px; object-fit:cover;">
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ skill.type }}</h5>
+                    <p class="card-text mb-1"><span class="badge bg-secondary">{{ skill.gender|capitalize }}</span></p>
+                    <p class="card-text mb-1"><span class="badge bg-warning text-dark">{{ skill.duration }} min</span></p>
+                    {% if skill.price is not none %}
+                    <p class="card-text mb-2"><span class="badge bg-success">€{{ '%.2f'|format(skill.price) }}</span></p>
+                    {% endif %}
+                    <button class="btn btn-outline-primary mt-auto" type="button" data-bs-toggle="modal" data-bs-target="#modal_{{ skill.id }}">Reserve</button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal for this skill -->
+        <div class="modal fade" id="modal_{{ skill.id }}" tabindex="-1" aria-labelledby="modalLabel_{{ skill.id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel_{{ skill.id }}">Reserve: {{ skill.type }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form method="post">
+                  <input type="hidden" name="skill_id" value="{{ skill.id }}">
+                  <div class="mb-2">
+                    <label for="customer_name_{{ skill.id }}" class="form-label">Your Name</label>
+                    <input type="text" name="customer_name" id="customer_name_{{ skill.id }}" class="form-control" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="customer_email_{{ skill.id }}" class="form-label">Your Email</label>
+                    <input type="email" name="customer_email" id="customer_email_{{ skill.id }}" class="form-control" required>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Choose Available Block</label>
+                    <input type="hidden" name="block" id="block_input_{{ skill.id }}" required>
+                    <div class="d-flex flex-wrap gap-2">
+                      {% if skill.available_times %}
+                        {% for block in skill.available_times %}
+                          <div class="btn btn-outline-primary block-choice" data-skill="{{ skill.id }}" data-block="{{ block }}">{{ block }}</div>
+                        {% endfor %}
+                      {% else %}
+                        <div class="text-muted">No available blocks</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-100">Reserve</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.querySelectorAll('.block-choice').forEach(function(div) {
+    div.addEventListener('click', function() {
+        var skillId = this.getAttribute('data-skill');
+        var blockValue = this.getAttribute('data-block');
+        // Remove active from all blocks for this skill
+        document.querySelectorAll('.block-choice[data-skill="' + skillId + '"]').forEach(function(d) {
+            d.classList.remove('active');
+        });
+        // Set active on clicked block
+        this.classList.add('active');
+        // Set hidden input value
+        document.getElementById('block_input_' + skillId).value = blockValue;
+    });
+});
+</script>
+</body>
+</html>
