@@ -1,3 +1,10 @@
+from flask import send_file
+import pandas as pd
+from io import BytesIO
+from odf.opendocument import OpenDocumentSpreadsheet
+from odf.style import Style, TextProperties
+from odf.table import Table, TableRow, TableCell
+from odf.text import P
 from flask import render_template, redirect, url_for, request, session, flash
 from app.models import db, User, Customer, CalendarEvent, Skill, Reservation
 from flask import Blueprint
@@ -5,8 +12,103 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import smtplib
 from email.mime.text import MIMEText
 
+# Move these imports below the Blueprint definition
+from flask import send_file
+import pandas as pd
+from io import BytesIO
+from odf.opendocument import OpenDocumentSpreadsheet
+from odf.style import Style, TextProperties
+from odf.table import Table, TableRow, TableCell
+from odf.text import P
+
 main = Blueprint('main', __name__)
 
+@main.route('/download_agenda_excel')
+def download_agenda_excel():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user_id = session['user_id']
+    reservations = Reservation.query.filter_by(user_id=user_id).order_by(Reservation.created_at.desc()).all()
+    data = [
+        {
+            'Customer Name': r.customer_name,
+            'Email': r.customer_email,
+            'Service': r.skill_id,
+            'Block': r.block,
+            'Created At': r.created_at
+        } for r in reservations
+    ]
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    wb = openpyxl.load_workbook(output)
+    ws = wb.active
+    # Style header
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="4F81BD")
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+    # Set column widths
+    col_widths = [18, 28, 10, 32, 22]
+    for i, width in enumerate(col_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+    # Add borders
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.border = thin_border
+    # Format date column
+    for cell in ws["E"]:
+        if cell.row == 1:
+            continue
+        cell.number_format = 'YYYY-MM-DD HH:MM:SS'
+        cell.alignment = Alignment(horizontal="center")
+    # Save to BytesIO
+    output2 = BytesIO()
+    wb.save(output2)
+    output2.seek(0)
+    return send_file(output2, download_name='agenda.xlsx', as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@main.route('/download_agenda_odt')
+def download_agenda_odt():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user_id = session['user_id']
+    reservations = Reservation.query.filter_by(user_id=user_id).order_by(Reservation.created_at.desc()).all()
+    doc = OpenDocumentSpreadsheet()
+    table = Table(name="Agenda")
+    # Define bold text style for header
+    from odf.style import Style, TextProperties, TableCellProperties, ParagraphProperties
+    # Header cell style: bold, blue background, center, padding
+    header_text_style = Style(name="HeaderTextStyle", family="paragraph")
+    header_text_style.addElement(TextProperties(fontweight="bold", color="#FFFFFF", backgroundcolor="#4F81BD"))
+    header_text_style.addElement(ParagraphProperties(textalign="center"))
+    doc.styles.addElement(header_text_style)
+    # Header row
+    header_row = TableRow()
+    for col in ['Customer Name', 'Email', 'Service', 'Block', 'Created At']:
+        cell = TableCell()
+        cell.addElement(P(text=col, stylename=header_text_style))
+        header_row.addElement(cell)
+    table.addElement(header_row)
+    # Data rows
+    for r in reservations:
+        row = TableRow()
+        for val in [r.customer_name, r.customer_email, r.skill_id, r.block, str(r.created_at)]:
+            cell = TableCell()
+            cell.addElement(P(text=str(val)))
+            row.addElement(cell)
+        table.addElement(row)
+    doc.spreadsheet.addElement(table)
+    output = BytesIO()
+    doc.write(output)
+    output.seek(0)
+    return send_file(output, download_name='agenda.ods', as_attachment=True, mimetype='application/vnd.oasis.opendocument.spreadsheet')
 @main.route('/reservation', methods=['GET', 'POST'])
 def reservation():
     if 'user_id' not in session:
@@ -52,8 +154,20 @@ def reservation():
     if request.method == 'POST':
         customer_name = request.form.get('customer_name')
         customer_email = request.form.get('customer_email')
+        customer_phone = request.form.get('customer_phone')
         skill_id = request.form.get('skill_id')
         block = request.form.get('block')
+        # Add customer if not already present
+        existing_customer = Customer.query.filter_by(name=customer_name, user_id=user_id).first()
+        if not existing_customer:
+            new_customer = Customer(name=customer_name, phone=customer_phone, email=customer_email, user_id=user_id)
+            db.session.add(new_customer)
+        elif existing_customer:
+            # Update phone or email if not set or changed
+            if not existing_customer.phone or existing_customer.phone != customer_phone:
+                existing_customer.phone = customer_phone
+            if not existing_customer.email or existing_customer.email != customer_email:
+                existing_customer.email = customer_email
         # Save reservation
         new_res = Reservation(customer_name=customer_name, customer_email=customer_email, skill_id=skill_id, block=block, user_id=user_id)
         db.session.add(new_res)
