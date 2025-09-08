@@ -46,22 +46,23 @@
               </div>
               <div class="modal-body">
                 <form method="post">
-                  <input type="hidden" name="skill_id" value="{{ skill.id }}">
+                  {{ form.hidden_tag() }}
+                  {{ form.skill_id(value=skill.id, type="hidden") }}
                   <div class="mb-2">
-                    <label for="customer_name_{{ skill.id }}" class="form-label">Your Name</label>
-                    <input type="text" name="customer_name" id="customer_name_{{ skill.id }}" class="form-control" required>
+                    {{ form.customer_name.label(class="form-label") }}
+                    {{ form.customer_name(class="form-control", id="customer_name_" ~ skill.id) }}
                   </div>
                   <div class="mb-2">
-                    <label for="customer_email_{{ skill.id }}" class="form-label">Your Email</label>
-                    <input type="email" name="customer_email" id="customer_email_{{ skill.id }}" class="form-control" required>
+                    {{ form.customer_email.label(class="form-label") }}
+                    {{ form.customer_email(class="form-control", id="customer_email_" ~ skill.id) }}
                   </div>
                   <div class="mb-2">
-                    <label for="customer_phone_{{ skill.id }}" class="form-label">Your Phone Number</label>
-                    <input type="text" name="customer_phone" id="customer_phone_{{ skill.id }}" class="form-control" required>
+                    {{ form.customer_phone.label(class="form-label") }}
+                    {{ form.customer_phone(class="form-control", id="customer_phone_" ~ skill.id) }}
                   </div>
                   <div class="mb-2">
+                    {{ form.block(type="hidden", id="block_input_" ~ skill.id) }}
                     <label class="form-label">Choose Available Block</label>
-                    <input type="hidden" name="block" id="block_input_{{ skill.id }}" required>
                     <div class="d-flex flex-wrap gap-2">
                       {% if skill.available_times %}
                         {% for block in skill.available_times %}
@@ -72,7 +73,9 @@
                       {% endif %}
                     </div>
                   </div>
-                  <button type="submit" class="btn btn-primary w-100">Reserve</button>
+                  <div class="mb-2">
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                  </div>
                 </form>
               </div>
             </div>

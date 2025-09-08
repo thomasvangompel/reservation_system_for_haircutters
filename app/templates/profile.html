@@ -8,31 +8,38 @@
                 <div class="card-body">
                     <h2 class="card-title mb-4 text-center">Profile</h2>
                     <form method="post">
+                        {{ form.hidden_tag() }}
                         <div class="mb-3">
-                            <label for="name" class="form-label">Name</label>
-                            <input type="text" class="form-control" id="name" name="name" value="{{ user.name or '' }}">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control", placeholder="Name") }}
                         </div>
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ user.email or '' }}">
+                            {{ form.store_name.label(class="form-label") }}
+                            {{ form.store_name(class="form-control", placeholder="Store Name") }}
                         </div>
                         <div class="mb-3">
-                            <label for="street" class="form-label">Street</label>
-                            <input type="text" class="form-control" id="street" name="street" value="{{ user.street or '' }}">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control", placeholder="Email") }}
                         </div>
                         <div class="mb-3">
-                            <label for="postal_code" class="form-label">Postal Code</label>
-                            <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ user.postal_code or '' }}">
+                            {{ form.street.label(class="form-label") }}
+                            {{ form.street(class="form-control", placeholder="Street") }}
                         </div>
                         <div class="mb-3">
-                            <label for="city" class="form-label">City</label>
-                            <input type="text" class="form-control" id="city" name="city" value="{{ user.city or '' }}">
+                            {{ form.postal_code.label(class="form-label") }}
+                            {{ form.postal_code(class="form-control", placeholder="Postal Code") }}
                         </div>
                         <div class="mb-3">
-                            <label for="country" class="form-label">Country</label>
-                            <input type="text" class="form-control" id="country" name="country" value="{{ user.country or '' }}">
+                            {{ form.city.label(class="form-label") }}
+                            {{ form.city(class="form-control", placeholder="City") }}
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Save Profile</button>
+                        <div class="mb-3">
+                            {{ form.country.label(class="form-label") }}
+                            {{ form.country(class="form-control", placeholder="Country") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.submit(class="btn btn-primary w-100") }}
+                        </div>
                     </form>
                 </div>
             </div>

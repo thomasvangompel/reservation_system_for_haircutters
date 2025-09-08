@@ -1,26 +1,27 @@
-from flask import send_file
-import pandas as pd
-from io import BytesIO
-from odf.opendocument import OpenDocumentSpreadsheet
-from odf.style import Style, TextProperties
-from odf.table import Table, TableRow, TableCell
-from odf.text import P
-from flask import render_template, redirect, url_for, request, session, flash
-from app.models import db, User, Customer, CalendarEvent, Skill, Reservation
-from flask import Blueprint
-from werkzeug.security import generate_password_hash, check_password_hash
-import smtplib
+from app.models import Employee
+
+
 from email.mime.text import MIMEText
-
-# Move these imports below the Blueprint definition
-from flask import send_file
+import smtplib
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Blueprint, render_template, redirect, url_for, request, session, flash, send_file
+from app.models import db, User, Customer, CalendarEvent, Skill, Reservation
 import pandas as pd
 from io import BytesIO
 from odf.opendocument import OpenDocumentSpreadsheet
-from odf.style import Style, TextProperties
+from odf.style import Style, TextProperties, TableCellProperties, ParagraphProperties
 from odf.table import Table, TableRow, TableCell
 from odf.text import P
-
+from flask import Blueprint
+from app.forms import (
+    ReservationForm,
+    ProfileForm,
+    SkillForm,
+    RegistrationForm,
+    LoginForm,
+    WerknemerForm,
+    CustomerForm
+)
 main = Blueprint('main', __name__)
 
 @main.route('/download_agenda_excel')
@@ -109,11 +110,13 @@ def download_agenda_odt():
     doc.write(output)
     output.seek(0)
     return send_file(output, download_name='agenda.ods', as_attachment=True, mimetype='application/vnd.oasis.opendocument.spreadsheet')
-@main.route('/reservation', methods=['GET', 'POST'])
-def reservation():
-    if 'user_id' not in session:
+@main.route('/<storename>/reservation', methods=['GET', 'POST'])
+def reservation(storename):
+    user = User.query.filter_by(store_name=storename).first()
+    if not user:
+        flash('Store not found!')
         return redirect(url_for('main.login'))
-    user_id = session['user_id']
+    user_id = user.id
     import datetime
     skills = Skill.query.filter_by(user_id=user_id).all()
     events = CalendarEvent.query.filter_by(user_id=user_id).all()
@@ -151,12 +154,14 @@ def reservation():
                         block_str = f"{event.date} {minutes_to_time(block_start)} - {minutes_to_time(block_end)}"
                         available_blocks.append(block_str)
         skill.available_times = available_blocks
-    if request.method == 'POST':
-        customer_name = request.form.get('customer_name')
-        customer_email = request.form.get('customer_email')
-        customer_phone = request.form.get('customer_phone')
-        skill_id = request.form.get('skill_id')
-        block = request.form.get('block')
+
+    form = ReservationForm()
+    if form.validate_on_submit():
+        customer_name = form.customer_name.data
+        customer_email = form.customer_email.data
+        customer_phone = form.customer_phone.data
+        skill_id = form.skill_id.data
+        block = form.block.data
         # Add customer if not already present
         existing_customer = Customer.query.filter_by(name=customer_name, user_id=user_id).first()
         if not existing_customer:
@@ -199,7 +204,7 @@ def reservation():
         send_reservation_email(customer_email, block)
         flash(f'Reservation for {customer_name} at {block} has been saved and an email has been sent to {customer_email}!')
         return redirect(url_for('main.thankyou'))
-    return render_template('reservation.html', skills=skills)
+    return render_template('reservation.html', skills=skills, form=form)
 
 def send_reservation_email(to_email, block):
     # Gmail SMTP configuration
@@ -249,9 +254,10 @@ def home():
 
 @main.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
         if User.query.filter_by(username=username).first():
             flash('User already exists!')
             return redirect(url_for('main.register'))
@@ -261,20 +267,21 @@ def register():
         db.session.commit()
         flash('Registration successful! Please log in.')
         return redirect(url_for('main.login'))
-    return render_template('register.html')
+    return render_template('register.html', form=form)
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    form = LoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
             session['username'] = user.username
             return redirect(url_for('main.dashboard'))
         flash('Invalid credentials!')
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @main.route('/dashboard')
 def dashboard():
@@ -287,15 +294,19 @@ def customers():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
     user_id = session['user_id']
-    if request.method == 'POST':
-        name = request.form['name']
-        phone = request.form['phone']
-        new_customer = Customer(name=name, phone=phone, user_id=user_id)
+    form = CustomerForm()
+    if form.validate_on_submit():
+        new_customer = Customer(
+            name=form.name.data,
+            phone=form.phone.data,
+            email=form.email.data,
+            user_id=user_id
+        )
         db.session.add(new_customer)
         db.session.commit()
         flash('Customer added!')
     customer_list = Customer.query.filter_by(user_id=user_id).all()
-    return render_template('customers.html', customers=customer_list)
+    return render_template('customers.html', customers=customer_list, form=form)
 
 @main.route('/calendar', methods=['GET', 'POST'])
 def calendar():
@@ -365,39 +376,48 @@ def profile():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
     user = User.query.get(session['user_id'])
+    form = ProfileForm(obj=user)
+    if form.validate_on_submit():
+        form.populate_obj(user)
     if request.method == 'POST':
         user.name = request.form.get('name')
         user.email = request.form.get('email')
+        user.store_name = request.form.get('store_name')
         user.street = request.form.get('street')
         user.postal_code = request.form.get('postal_code')
         user.city = request.form.get('city')
         user.country = request.form.get('country')
         db.session.commit()
         flash('Profile updated!')
-    return render_template('profile.html', user=user)
+        return redirect(url_for('main.dashboard'))
+    return render_template('profile.html', form=form, user=user)
 
 @main.route('/skills', methods=['GET', 'POST'])
 def skills():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
     user_id = session['user_id']
-    if request.method == 'POST':
-        gender = request.form.get('gender', 'x')
-        skill_type = request.form.get('type')
-        price = request.form.get('price', type=float)
-        duration = request.form.get('duration', type=int)
+    form = SkillForm()
+    if form.validate_on_submit():
+        image = form.image.data
         image_url = None
-        if 'image' in request.files:
-            image = request.files['image']
-            if image.filename:
-                image_path = f'static/uploads/{image.filename}'
-                image.save(f'app/{image_path}')
-                image_url = '/' + image_path
-        if gender and skill_type and image_url and price and duration:
-            new_skill = Skill(name=skill_type, gender=gender, type=skill_type, image_url=image_url, price=price, duration=duration, user_id=user_id)
-            db.session.add(new_skill)
-            db.session.commit()
-            flash('Skill added!')
+        if image and hasattr(image, 'filename') and image.filename:
+            image_path = f'static/uploads/{image.filename}'
+            image.save(f'app/{image_path}')
+            image_url = '/' + image_path
+        new_skill = Skill(
+            gender=form.gender.data,
+            type=form.type.data,
+            price=form.price.data,
+            duration=form.duration.data,
+            image_url=image_url
+        )
+        db.session.add(new_skill)
+        db.session.commit()
+        flash('Skill added!')
+    page = request.args.get('page', 1, type=int)
+    skills = Skill.query.filter_by(user_id=user_id).paginate(page=page, per_page=5)
+    return render_template('skills.html', skills=skills, form=form)
     page = request.args.get('page', 1, type=int)
     per_page = 3
     skills = Skill.query.filter_by(user_id=user_id).paginate(page=page, per_page=per_page)
@@ -419,3 +439,27 @@ def delete_skill(skill_id):
 @main.route('/thankyou')
 def thankyou():
     return render_template('thankyou.html')
+
+
+@main.route('/werknemers', methods=['GET', 'POST'])
+def werknemers():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user_id = session['user_id']
+    form = WerknemerForm()
+    if form.validate_on_submit():
+        new_employee = Employee(
+            name=form.name.data,
+            email=form.email.data,
+            address=form.address.data,
+            phone=form.phone.data,
+            age=form.age.data,
+            gender=form.gender.data,
+            user_id=user_id
+        )
+        db.session.add(new_employee)
+        db.session.commit()
+        flash(f"Employee {form.name.data} added!")
+        return redirect(url_for('main.werknemers'))
+    employees = Employee.query.filter_by(user_id=user_id).all()
+    return render_template('werknemers.html', form=form, employees=employees)

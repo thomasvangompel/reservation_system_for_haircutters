@@ -1,3 +1,4 @@
+                        
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +22,17 @@
                         <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.dashboard' %} active{% endif %}">Dashboard</a>
                         <a href="{{ url_for('main.customers') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.customers' %} active{% endif %}">Customers</a>
                         <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.calendar' %} active{% endif %}">Create Calendar</a>
-                        <a href="{{ url_for('main.reservation') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.reservation' %} active{% endif %}">Reservation</a>
+                        <a href="{{ url_for('main.werknemers') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.werknemers' %} active{% endif %}">Werknemers</a>
+                        {% if session['username'] and session['user_id'] %}
+                        {% set user = User.query.get(session['user_id']) %}
+                        {% if user.store_name %}
+                        <a href="/{{ user.store_name }}/reservation" class="btn btn-outline-primary{% if request.endpoint == 'main.reservation' %} active{% endif %}">Reservation</a>
+                        {% else %}
+                        <a href="{{ url_for('main.profile') }}?flash=Please+set+your+store+name+first" class="btn btn-outline-primary">Reservation</a>
+                        {% endif %}
+                        {% else %}
+                        <a href="#" class="btn btn-outline-primary disabled">Reservation</a>
+                        {% endif %}
                         <a href="{{ url_for('main.agenda') }}" class="btn btn-outline-primary{% if request.endpoint == 'main.agenda' %} active{% endif %}">Agenda</a>
                         <a href="{{ url_for('main.profile') }}" class="btn btn-outline-secondary{% if request.endpoint == 'main.profile' %} active{% endif %}">Profile</a>
                         <a href="{{ url_for('main.skills') }}" class="btn btn-outline-secondary{% if request.endpoint == 'main.skills' %} active{% endif %}">Skills</a>

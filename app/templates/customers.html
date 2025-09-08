@@ -8,13 +8,22 @@
                     <div class="card-body">
                         <h2 class="card-title mb-4 text-center">Customers</h2>
                         <form method="post" class="mb-4">
+                            {{ form.hidden_tag() }}
                             <div class="mb-3">
-                                <input type="text" name="name" class="form-control" placeholder="Customer Name" required>
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control", placeholder="Customer Name") }}
                             </div>
                             <div class="mb-3">
-                                <input type="text" name="phone" class="form-control" placeholder="Phone">
+                                {{ form.phone.label(class="form-label") }}
+                                {{ form.phone(class="form-control", placeholder="Phone") }}
                             </div>
-                            <button type="submit" class="btn btn-primary w-100">Add Customer</button>
+                            <div class="mb-3">
+                                {{ form.email.label(class="form-label") }}
+                                {{ form.email(class="form-control", placeholder="Email") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.submit(class="btn btn-primary w-100") }}
+                            </div>
                         </form>
                         <ul class="list-group">
                             {% for customer in customers %}
